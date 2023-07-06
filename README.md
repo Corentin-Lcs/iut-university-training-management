@@ -62,7 +62,7 @@ command_name <requested_arguments>
 
 Each `xxx` test set includes 2 files. The first, named `in-xxx.txt`, contains a sequence of commands to be accepted by the program. The second, named `out-xxx.txt`, contains the series of messages that the program must display when the commands contained in `in-xxx.txt` are entered on the keyboard.
 
-You can copy the commands from `in-xxx.txt` one by one to paste them one by one when running your program. You can just as well copy multiple lines at once and submit them (by pasting them at once) into the program run window. This mode is particularly useful when you want to use the debugger and set breakpoints.
+You can copy the commands from `in-xxx.txt` one by one to paste them one by one when running the program. You can just as well copy multiple lines at once and submit them (by pasting them at once) into the program run window. This mode is particularly useful when you want to use the debugger and set breakpoints.
 
 To avoid any copy / paste, it is possible to redirect the program input by executing the following command :
 
