@@ -1,8 +1,10 @@
 <h1 align="center">University Management · IUT de Paris - Rives de Seine</h1>
 
+
 The "University Training Management" GitHub project is a command-line interpreter that allows managing a university training. The commands enable defining the structure of the program as well as the enrolled students, assigning grades to these students, and performing end-of-semester and end-of-year tasks (such as editing grade reports and establishing jury decisions).
 
-> **Warning** : The project has been developed exclusively in a professional context, with the specific aim of promoting learning. It is carried out as a project for the University of Paris.
+> [!IMPORTANT]  
+> The project has been developed exclusively in a professional context, with the specific aim of promoting learning. It is carried out as a project for the University of Paris.
 
 <p align="center">
   <img src="https://github.com/Corentin-Lcs/iut-university-training-management/blob/main/University.jpg" alt="University.jpg"/>
