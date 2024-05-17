@@ -1,0 +1,301 @@
+\documentclass[10pt,a4paper,oneside]{article}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{textpos}
+\usepackage{pstricks}
+\usepackage{subfigure}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{fancyvrb}
+\usepackage{xcolor}
+
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{calc}
+\usetikzlibrary{shadows}
+
+\tikzstyle{every picture}=[scale=0.7, inner sep=1.5pt]
+\def\des{\node[draw,shape=rectangle,rounded corners=2pt,minimum size=.5cm,shade]}
+
+\usepackage[a4paper,hmargin=1.5cm, vmargin=1.5cm, centering]{geometry}
+
+\definecolor{violetcurie}{RGB}{115,26,67}
+\definecolor{forestgreen}{rgb}{0.13,0.54,0.13}
+
+\usepackage{listings}
+\lstset
+{
+  language=C,
+	tabsize=2,
+	basicstyle=\small\ttfamily,
+  keywordstyle=\bfseries\color{violetcurie},
+  commentstyle=\itshape\color{forestgreen},
+	identifierstyle=\color{blue},
+  stringstyle=\color{brown}
+}
+
+\begin{document}
+
+\date{}
+\author{}
+\title{
+    \vspace{-1.5cm}
+    S U J E T\\
+    {\Large \textsc{implémentation d'un besoin client}}\\
+    \vspace{3 mm}
+    {\Large -- \textsc{Gestion D'Une Formation} --}\\
+}
+
+\maketitle
+
+\vspace{-1.5cm}
+
+Le but du projet est de développer un interpréteur de commande permettant de gérer une formation universitaire. Les commandes à prendre en compte vont permettre de définir la structure de la formation ainsi que les étudiants qui y sont inscrits, d'affecter des notes à ces étudiants et enfin de réaliser les tâches de fin de semestre et d'année (édition de relevés de notes et établissement des décisions de jury).
+
+\section{Définitions}
+
+Une formation est toujours composée de 2 semestres (désignés respectivement par S1 et S2). Une formation est structurée en unités d'enseignement (UE). Le nombre d'UE est obligatoirement compris entre 3 et 6. \`A chaque semestre est associé une ou plusieurs matières et chaque matière prévoit une ou plusieurs épreuves (interrogation, projet, DST, ...). Enfin, à chaque épreuve est associé un coefficient (un réel positif) par UE. L'ensemble de ces informations peut être synthétisé sous la forme d'un tableau comme dans l'exemple ci-dessous.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|l|c|c|c|} \hline
+		 \multirow{2}{*}{\textit{Semestres}} & \multirow{2}{*}{\textit{Matières}} & \multirow{2}{*}{\textit{\'Epreuves}} & \multicolumn{3}{c|}{\textit{Coefficients}} \\ \cline{4-6}
+		  &  &  & \textit{UE1} & \textit{UE2} & \textit{UE3} \\ \hline\hline
+		\multirow{4}{*}{S1} & \multirow{2}{*}{Programmation} & Projet & 1 & 2 & 0 \\ \cline{3-6}
+		 &  & DST & 2 & 3 & 0 \\ \cline{2-6}
+		 & \multirow{2}{*}{SGBD} 	& Participation & 0,5 & 0 & 0,5 \\ \cline{3-6}
+		 &  & Rapport & 1,5 & 0 & 1,5 \\ \hline \hline
+		\multirow{4}{*}{S2} & \multirow{2}{*}{Architecture} & Interrogation & 1 & 0 & 2 \\ \cline{3-6}
+		 &  & DST & 0 & 1 & 4 \\ \cline{2-6}
+		 & \multirow{2}{*}{Systèmes} & QCM & 2 & 3 & 0,5 \\ \cline{3-6}
+		 &  & Exposé & 3 & 2 & 0,5 \\ \hline
+	\end{tabular}
+	\caption{Matières, épreuves et coefficients}
+	\label{tab:MatieresEpreuvesEtCoefficients}
+\end{table}
+
+Dans l'exemple de la Table 1, la formation est limitée à 3 UE. Chaque semestre est composé de 2 matières et chaque matière prévoit 2 épreuves. On voit que pour une épreuve donnée, le coefficient de certaines UE est égal à 0. Les coefficients peuvent prendre toute valeur. Toutefois, pour une épreuve donnée, au moins un des coefficients d'une UE est nécessairement non nul car toute épreuve doit concourir à la moyenne d'au moins une UE. De même, pour une UE donnée, au moins un des coefficients d'une épreuve de chaque semestre est nécessairement non nul car la moyenne de toute UE doit pouvoir être calculée à chaque semestre.
+
+\medskip
+
+\`A l'issu de chaque épreuve, les étudiants reçoivent une note (un réel compris entre 0 et 20). \`A la fin de chaque semestre, la moyenne de chaque matière est calculée pour chaque UE. Elle correspond à la moyenne pondérée par les coefficients des notes obtenues par l'étudiant aux épreuves de la matière. La moyenne d'UE est elle aussi calculée. Elle correspond à la moyenne des notes des épreuves du semestre. Cette moyenne est pondérée avec les mêmes coefficients. Le tableau ci-dessous présente les notes et les moyennes d'un étudiant donné à l'issu du premier semestre.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|c|c|c|c|} \hline
+		 \multirow{2}{*}{\textit{Matières}} & \multirow{2}{*}{\textit{\'Epreuves}} & \multirow{2}{*}{\textit{Notes}} & \multicolumn{3}{c|}{\textit{Moyennes / Matières}} \\ \cline{4-6}
+		  &  &  & \textit{UE1} & \textit{UE2} & \textit{UE3} \\ \hline\hline
+		\multirow{2}{*}{Programmation} & Projet & 12 & \multirow{2}{*}{10} & \multirow{2}{*}{10,2} & \multirow{2}{*}{\textit{ND}} \\ \cline{2-3}
+		 & DST & 9 &  &  &  \\ \hline
+		 \multirow{2}{*}{SGBD} 	& Participation & 16 & \multirow{2}{*}{13} & \multirow{2}{*}{\textit{ND}} & \multirow{2}{*}{13} \\ \cline{2-3}
+		 & Rapport & 12 &  &  &  \\ \hline \hline
+		\multicolumn{3}{|l|}{\textbf{Moyennes/UE}} & \textbf{11,2} & \textbf{10,2} & \textbf{13} \\ \hline
+	\end{tabular}
+	\caption{Notes et moyennes}
+	\label{tab:NotesEtMoyennes}
+\end{table}
+
+Dans l'exemple de la Table 2, on voit que l'étudiant a obtenu la note 12 au \textit{Projet} de la matière \textit{Programmation} et 9 au \textit{DST} de cette même matière. La moyenne de cette matière pour l'\textit{UE1} est obtenue en calculant $((12 \times \mathbf{1}) + (9 \times \mathbf{2})) \div (\mathbf{1} + \mathbf{2}) = 30 \div 3 = 10$, c'est à dire en calculant la somme des notes multipliées par leur coefficient respectif et en la divisant par la somme des coefficients. Les coefficients sont présentés en gras dans le calcul. On remarque que lorsque la somme des coefficients est nulle, la moyenne n'est pas calculée et cela est spécifié par la marque \textit{ND} (pour \textit{N}on \textit{D}éfinie). La moyenne d'une UE est obtenue en réalisant le même calcul mais en considérant toutes les épreuves du semestre. Par exemple, la moyenne de l'\textit{UE1} donne $((12 \times \mathbf{1}) + (9 \times \mathbf{2}) + (16 \times \mathbf{0,5}) + (12 \times \mathbf{1,5})) \div (\mathbf{1} + \mathbf{2} + \mathbf{0,5} + \mathbf{1,5}) = 56 \div 5 = 11,2$.
+
+\medskip
+
+\`A la fin de l'année, les décisions de jury sont prises. Pour ce faire, les moyennes de l'année par UE sont calculées. Ce calcul est facile, car il correspond à la moyenne simple (non pondérée) des moyennes des deux semestres UE par UE. Les UE dont la moyenne annuelle est supérieure ou égale à 10 sont acquises. L'étudiant passe dans l'année suivante s'il a acquis plus de la moitié des UE de l'année et il redouble dans le cas contraire. Ce calcul est synthétisé dans le tableau suivant.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|c|c|c|} \hline
+		 \multirow{2}{*}{\textit{Semestres}} & \multicolumn{3}{c|}{\textit{Moyennes/UE}} \\ \cline{2-4}
+		  & \textit{UE1} & \textit{UE2} & \textit{UE3} \\ \hline\hline
+		S1 & 11,2 & 10,2 & 13 \\ \hline
+		S2 & 9,3 & 8,1 & 13 \\ \hline \hline
+		\textbf{Moyennes annuelles} & \textbf{10,2} & \textbf{9,1} & \textbf{13} \\ \hline 
+		\textbf{Acquisition} & \multicolumn{3}{l|}{\textbf{UE1 et UE3}} \\ \hline 
+		\textbf{Devenir} & \multicolumn{3}{l|}{\textbf{Passage}} \\ \hline 
+	\end{tabular}
+	\caption{Moyennes annuelles et décisions}
+	\label{tab:MoyennesAnnuelles}
+\end{table}
+
+Pour l'étudiant de la Table 3, la moyenne annuelle de l'\textit{UE1} est obtenue par $(11,2 + 9,3) \div 2 \approx 10,2$. L'arrondi réalisé ici est expliqué dans la suite de ce document. Les moyennes annuelles de l'\textit{UE1} et l'\textit{UE3} sont supérieures ou égales à 10 et ces UE sont donc acquises alors que l'\textit{UE2} ne l'est pas. L'étudiant a acquis deux UE sur trois et peut donc passer dans l'année suivante de la formation. 
+
+\section{Cahier des charges}
+
+L'application à développer doit interpréter 8 commandes distinctes. Celles-ci sont représentées par des chaînes de caractères de formats spécifiés ci-dessous. Le caractère séparateur entre la commande et les différents champs d'information est le caractère 'espace'.  
+
+Les commandes peuvent être soit entrées en utilisant l'entrée standard (le clavier), soit par redirection d'un fichier texte sur l'entrée standard. En tout état de cause, le programme doit lire les commandes sur l'entrée standard et produire des résultats sur la sortie standard (l'écran). Les commandes sont supposées respecter le format attendu. Seules les erreurs explicitement indiquées dans le document doivent être prises en compte par le programme. Les commandes sont les suivantes :
+
+\subsection*{C1 - Commande de sortie du programme}
+Une ligne composée de la chaîne de caractères \texttt{exit}.
+
+\subsection*{C2 - Commande de définition d'une formation}
+Une ligne composée de la chaîne de caractères "\texttt{formation}" suivie du nombre d'UE la composant. Ce nombre doit être compris entre 3 et 6.
+
+\medskip
+
+Le programme doit afficher le message "\texttt{Le nombre d'UE est defini}" ou, le cas échéant, l'un des messages suivants "\texttt{Le nombre d'UE est deja defini}" ou "\texttt{Le nombre d'UE est incorrect}".
+\\
+Les commandes suivantes ne doivent être prises en compte par le programme qu'une fois le nombre d'UE défini. Si ce n'est pas le cas, toutes les commandes suivantes doivent afficher le message "\texttt{Le nombre d'UE n'est pas defini}".
+
+\subsection*{C3 - Ajout d'une épreuve}
+Une ligne composée de la chaîne de caractères "\texttt{epreuve}" suivie du numéro de semestre, du nom de la matière, du nom de l'épreuve, et d'un coefficient par UE. Le numéro de semestre doit être égal à 1 ou 2, chaque coefficient doit être supérieur ou égal à 0 et au moins un des coefficients doit être strictement supérieur à 0. De plus, aucune épreuve pré-existante dans ce semestre et cette matière ne doit porter le même nom.
+
+\medskip
+
+Le programme doit afficher le message "\texttt{Epreuve ajoutee a la formation}" ou, le cas échéant, l'un des messages suivants "\texttt{Le numero de semestre est incorrect}", "\texttt{Une meme epreuve existe deja}" ou "\texttt{Au moins un des \\coefficients est incorrect}". De plus, en cas de succés et dans le cas où la commande correspond à la première épreuve de la matière, le programme doit préalablement afficher le message "\texttt{Matiere ajoutee a la formation}".
+
+\subsection*{C4 - Vérification des coefficients}
+Une ligne composée de la chaîne de caractères "\texttt{coefficients}" suivie du numéro de semestre. Le numéro de semestre doit être égal à 1 ou 2.
+
+\medskip
+
+Le programme doit afficher le message "\texttt{Coefficients corrects}" ou, le cas échéant, l'un des messages suivants "\texttt{Le numero de semestre est incorrect}", "\texttt{Le semestre ne contient aucune epreuve}" ou "\texttt{Les coefficients d'au moins une UE de ce semestre sont tous nuls}".
+
+\subsection*{C5 - Ajout d'une note}
+Une ligne composée de la chaîne de caractères "\texttt{note}" suivie du numéro de semestre, du nom d'un étudiant, du nom d'une matière, du nom d'une épreuve et d'une note. Le numéro de semestre doit être égal à 1 ou 2 et la note comprise entre 0 et 20.
+
+\medskip
+
+Le programme doit afficher le message "\texttt{Note ajoutee a l'etudiant}" ou, le cas échéant, l'un des messages suivants "\texttt{Le numero de semestre est incorrect}", "\texttt{Matiere inconnue}", "\texttt{Epreuve inconnue}", "\texttt{Note incorrecte}" ou "\texttt{Une note est deja definie pour cet etudiant}". De plus, en cas de succés et dans le cas où la commande correspond à la première note de l'étudiant, le programme doit préalablement afficher le message "\texttt{Etudiant ajoute a la formation}".
+
+\subsection*{C6 - Vérification des notes}
+Une ligne composée de la chaîne de caractères "\texttt{notes}" suivie du numéro de semestre et du nom d'un étudiant. Le numéro de semestre doit être égal à 1 ou 2.
+
+\medskip
+
+Le programme doit afficher le message "\texttt{Notes correctes}" ou, le cas échéant, l'un des messages suivants "\texttt{Le numero de semestre est incorrect}", "\texttt{Etudiant inconnu}" ou "\texttt{Il manque au moins une note pour cet etudiant}".
+
+\subsection*{C7 - Affichage d'un relevé de notes}
+Une ligne composée de la chaîne de caractères "\texttt{releve}" suivie du numéro de semestre et du nom d'un étudiant. Le numéro de semestre doit être égal à 1 ou 2.
+
+\medskip
+
+Le programme doit afficher le relevé de l'étudiant selon l'exemple donné ci-dessous ou, le cas échéant, l'un des messages suivants "\texttt{Le numero de semestre est incorrect}", "\texttt{Etudiant inconnu}", "\texttt{Les coefficients de ce semestre sont incorrects}" ou "\texttt{Il manque au moins une note pour cet etudiant}". En admettant que les notes au semestre 1 de l'étudiant désigné par la commande sont celles présentées dans la Table 2, votre programme doit afficher :
+
+\begin{verbatim}
+               UE1  UE2  UE3
+Programmation 10.0 10.2   ND
+SGBD          13.0   ND 13.0
+--
+Moyennes      11.2 10.2 13.0
+\end{verbatim}
+
+Les notes doivent être arrondies sur une décimale (uniquement à l'affichage et pas lors des calculs). La note 9,99 doit être arrondie à 9,9 et non pas à 10.
+
+\subsection*{C8 - Affichage d'une décision de jury}
+Une ligne composée de la chaîne de caractères "\texttt{decision}" suivie du nom d'un étudiant.
+
+\medskip
+
+Le programme doit afficher les décisions de l'étudiant selon l'exemple donné ci-dessous ou, le cas échéant, l'un des messages suivants "\texttt{Etudiant inconnu}", "\texttt{Les coefficients d'au moins un semestre sont incorrects}" ou "\texttt{Il manque au moins une note pour cet etudiant}". En admettant que les relevés de l'étudiant désigné par la commande sont ceux présentés dans la Table~\ref{tab:MoyennesAnnuelles}, le programme doit afficher :
+
+\begin{verbatim}
+                    UE1  UE2  UE3
+S1                 11.2 10.2 13.0
+S2                  9.3  8.1 13.0
+--
+Moyennes annuelles 10.2  9.1 13.0
+Acquisition        UE1, UE3
+Devenir            Passage
+\end{verbatim}
+
+Les UE acquises doivent être séparées par une virgule suivie d'un espace. Dans le cas particulier où aucune UE est acquise, le message "\texttt{Aucune}" doit être affiché. Enfin, si la condition de passage n'est pas atteinte, le message "\texttt{Redoublement}" doit être affiché. 
+
+\section{Limites numériques}
+
+Nous rappelons que toute formation est composée de 2 semestres et que le nombre d'UE est compris entre 3 et 6. De plus, le nombre de matières est limité à 10 par semestre. Chaque matière ne peut comporter plus de 5 épreuves. Pas plus de 100 étudiants suivent la formation. Enfin, la taille maximale des chaînes de caractères est de 30. Le dépassement de ces limites n'a pas à être testé. 
+
+\medskip
+
+Le développement logiciel se fait par cycle de type agile au moyen de quatre sprints. Chaque sprint est défini par un ensemble de commandes devant être supporté par le programme et un test par redirection correspondant à un jeu de données de test (\texttt{in.txt}) et ses résultats attendus (\texttt{out.txt}). Pour un sprint donné, si le résultat de l'application coïncide avec le résultat de référence (\texttt{out.txt}), le sprint est considéré comme étant validé. Dès lors, le développement du sprint suivant débute. L'annexe (fig. 1) est un exemple d'exécution du programme correspondant au dernier sprint. Les commandes à prendre en compte par les différents sprints sont les suivantes :
+
+\begin{center}
+	\begin{tabular}{|c|l|} \hline
+		Sprint & Commandes \\ \hline \hline
+		SP1 & \texttt{formation}, \texttt{epreuve}, \texttt{coefficient} et \texttt{exit} \\ \hline
+		SP2 & SP1 + \texttt{note} et \texttt{notes} \\ \hline
+		SP3 & SP2 + \texttt{releve} \\ \hline
+		SP4 & SP3 + \texttt{decision} \\ \hline
+	\end{tabular}
+\end{center}
+
+\section*{Annexe}
+\begin{center}
+\begin{figure*}[ht]
+\setlength{\columnseprule}{.25mm}
+\setlength{\columnsep}{15.mm}
+\begin{multicols}{2}
+\color{blue}
+\begin{Verbatim}[commandchars=\\\{\}]
+\textcolor{red}{formation 3}
+Le nombre d'UE est defini
+\textcolor{red}{epreuve 1 Programmation Projet 1 2 0}
+Matiere ajoutee
+Epreuve ajoutee
+\textcolor{red}{epreuve 1 Programmation DST 2 3 0}
+Epreuve ajoutee
+\textcolor{red}{epreuve 1 SGBD Participation 0.5 0 0.5}
+Matiere ajoutee
+Epreuve ajoutee
+\textcolor{red}{epreuve 1 SGBD Rapport 1.5 0 1.5}
+Epreuve ajoutee
+\textcolor{red}{coefficients 1}
+Coefficients corrects
+\textcolor{red}{note 1 Paul Programmation Projet 12}
+Etudiant ajoute a la formation 
+Note ajoutee a l'etudiant
+\textcolor{red}{note 1 Paul Programmation DST 9}
+Note ajoutee a l'etudiant
+\textcolor{red}{note 1 Paul SGBD Participation 16}
+Note ajoutee a l'etudiant
+\textcolor{red}{note 1 Paul SGBD Rapport 12}
+Note ajoutee a l'etudiant
+\textcolor{red}{releve 1 Paul}
+               UE1  UE2  UE3
+Programmation 10.0 10.2   ND
+SGBD          13.0   ND 13.0
+--
+Moyennes      11.2 10.2 13.0
+\textcolor{red}{epreuve 2 Architecture Interrogation 1 0 2}
+Matiere ajoutee
+Epreuve ajoutee
+\textcolor{red}{epreuve 2 Architecture DST 0 1 4}
+Epreuve ajoutee
+\textcolor{red}{epreuve 2 Systeme QCM 2 3 0.5}
+Matiere ajoutee
+Epreuve ajoutee
+\textcolor{red}{epreuve 2 Systeme Expose 3 2 0.5}
+Epreuve ajoutee
+\textcolor{red}{coefficients 2}
+Coefficients corrects
+\textcolor{red}{note 2 Paul Architecture Interrogation 18}
+Note ajoutee a l'etudiant
+\textcolor{red}{note 2 Paul Architecture DST 12}
+Note ajoutee a l'etudiant
+\textcolor{red}{note 2 Paul Systeme QCM 7}
+Note ajoutee a l'etudiant
+\textcolor{red}{note 2 Paul Systeme Expose 8}
+Note ajoutee a l'etudiant
+\textcolor{red}{releve 2 Paul}
+              UE1  UE2  UE3
+Architecture 18.0 12.0 14.0
+Systeme       7.6  7.4  7.5
+--
+Moyennes      9.3  8.1 13.0
+\textcolor{red}{decision Paul}
+                    UE1  UE2  UE3
+S1                 11.2 10.2 13.0
+S2                  9.3  8.1 13.0
+--
+Moyennes annuelles 10.2  9.1 13.0
+Acquisition        UE1, UE3
+Devenir            Passage
+\textcolor{red}{exit}
+\end{Verbatim}
+\end{multicols}
+	\caption{Exemple de session -- en \textcolor{red}{rouge}, les données saisies par l'utilisateur, en \textcolor{blue}{bleu}, les messages affichés par le programme.}
+	\label{fig:session}
+\end{figure*}
+\end{center}
+
+\end{document}
